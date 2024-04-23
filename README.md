@@ -1,25 +1,3 @@
----
-title: "Cyclistics 2021-2022 Report"
-author: "Zsolnay"
-date: "2023-07-25"
-output:
-  html_document:
-    theme: sandstone
-    toc: true
-    toc_float: true
-  word_document:
-    theme: sandstone
-  pdf_document: 
-    theme: sandstone
-  html_notebook: 
-    theme: sandstone
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
-library(bslib)
-```
-
 ##### Google Data Analytics Professional Certificate capstone case study track one Cyclistic bike-share analysis
 
 ![](divvy-bike.jpg) image from: <https://freechicagowalkingtours.com/chicago-divvy-bike-guide/>
