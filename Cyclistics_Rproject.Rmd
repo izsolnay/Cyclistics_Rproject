@@ -1,0 +1,909 @@
+---
+title: "Cyclistics 2021-2022 Analysis in R on RStudio"
+author: "Zsolnay"
+date: "2023-07-08"
+output:
+    html_document:    
+    theme: sandstone
+        toc: true
+    toc_float: true
+    df_print: paged
+        theme: sandstone
+  html_notebook:     
+    theme: sandstone
+  word_document:     
+    theme: sandstone
+  pdf_document:     
+    theme: sandstone
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+library(bslib)
+```
+
+##### Google Data Analytics Professional Certificate capstone case study track one Cyclistic bike-share analysis
+
+## Prepare data
+
+#### Set up initial environment by loading packages:
+
+```{r installing packages}
+library(tidyverse)
+library(magrittr)
+library(rmarkdown)
+```
+
+#### Import files Divvy data files from October 2021-September 2022 and simplify file names:
+
+```{r import data files, results = "hide"}
+Oct_2021 <- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202110-divvy-tripdata.csv")
+Nov_2021 <- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202111-divvy-tripdata.csv")
+Dec_2021 <- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202112-divvy-tripdata.csv")
+Jan_2022 <- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202201-divvy-tripdata.csv")
+Feb_2022 <- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202202-divvy-tripdata.csv")
+Mar_2022 <- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202203-divvy-tripdata.csv")
+Apr_2022 <- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202204-divvy-tripdata.csv")
+May_2022 <- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202205-divvy-tripdata.csv")
+June_2022 <- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202206-divvy-tripdata.csv")
+July_2022 <- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202207-divvy-tripdata.csv")
+Aug_2022 <- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202208-divvy-tripdata.csv")
+Sept_2022<- read_csv("~/Desktop/FINAL PROJECT/2021-2022 original files/202209-divvy-tripdata.csv")
+```
+
+#### Check each file for proper import by column and row count (not including header):
+
+```{r row count}
+dim(Oct_2021)
+dim(Nov_2021)
+dim(Dec_2021)
+dim(Jan_2022)
+dim(Feb_2022)
+dim(Mar_2022)
+dim(Apr_2022)
+dim(May_2022)
+dim(June_2022)
+dim(July_2022)
+dim(Aug_2022)
+dim(Sept_2022)
+```
+
+#### Check that all column names are in agreement:
+
+```{r agreement of column names}
+colnames(Oct_2021)
+colnames(Nov_2021)
+colnames(Dec_2021)
+colnames(Jan_2022)
+colnames(Feb_2022)
+colnames(Mar_2022)
+colnames(Apr_2022)
+colnames(May_2022) 
+colnames(June_2022)
+colnames(July_2022)
+colnames(Aug_2022)
+colnames(Sept_2022)
+```
+
+#### Check a sample of Oct_2021 to get a feel for the data frame:
+
+Note many NAs.
+
+View(Oct_2021)
+
+## Process (wrangling, cleaning, and transformation)
+
+#### Columns in agreement, so bind into fiscal and seasonal quarters:
+
+```{r bind into quaters}
+fiscal_year_2021_2022_1Q <- bind_rows (Oct_2021, Nov_2021, Dec_2021)
+fiscal_year_2021_2022_2Q <- bind_rows (Jan_2022, Feb_2022, Mar_2022)
+fiscal_year_2021_2022_3Q <- bind_rows (Apr_2022, May_2022, June_2022)
+fiscal_year_2021_2022_4Q <- bind_rows (July_2022, Aug_2022, Sept_2022)
+```
+
+#### Check row and column counts:
+
+```{r check counts}
+dim(fiscal_year_2021_2022_1Q)
+dim(fiscal_year_2021_2022_2Q)
+dim(fiscal_year_2021_2022_3Q)
+dim(fiscal_year_2021_2022_4Q)
+```
+
+#### Bind all quarters into new data frame entitled "cyclistic_2021_2022":
+
+```{r bind into one df}
+cyclistic_2021_2022 <- bind_rows (fiscal_year_2021_2022_1Q,fiscal_year_2021_2022_2Q,fiscal_year_2021_2022_3Q,fiscal_year_2021_2022_4Q)
+```
+
+#### Check that files bound and check out new data frame:
+
+```{r new df}
+glimpse(cyclistic_2021_2022)
+```
+
+#### Check out the variables for the columns rideable_type and member_casual:
+
+```{r check specifics}
+table(cyclistic_2021_2022$member_casual)
+table(cyclistic_2021_2022$rideable_type)
+```
+
+#### Rename columns ride_id, started_at, ended_at, rideable_type, and member_casual:
+
+```{r rename}
+cyclistic_2021_2022 <- cyclistic_2021_2022 %>% 
+  rename(trip_id = ride_id
+         ,bike_type = rideable_type
+         ,start_time = started_at
+         ,end_time = ended_at
+         ,user_type = member_casual)
+```
+
+#### Check new column names:
+
+```{r check names}
+colnames(cyclistic_2021_2022)
+```
+
+#### Check data frame for missing values:
+
+```{r checks for NAs}
+any(is.na(cyclistic_2021_2022))
+```
+
+#### Set up cleaning environment and perform thorough review of data frame:
+
+```{r set up clean}
+library(skimr)
+library(janitor)
+```
+
+```{r check df}
+skim(cyclistic_2021_2022)
+```
+
+#### Note that there are:
+
+-   5828235 rows the trip_id is a consistent string length at 16 characters
+
+-   3 unique types of bikes
+
+-   1591 unique start stations, which do not match the unique start station ids at 1302
+
+-   1609 unique end stations, which do not match the unique end station ids at 1309
+
+-   Both of these suggest that the station names are not consistent
+
+-   Also, curious that the number of unique start and end stations is not the same.
+
+-   895032 start stations and ids each are missing
+
+-   958227 end stations and ids each are missing
+
+-   0 missing start latitudes or longitudes
+
+-   5844 missing end latitudes and longitudes each
+
+-   2 unique user types no white spaces
+
+#### Remove rows with missing values and check new row and column count. Create draft of new data frame:
+
+```{r drop NAs}
+cyclistic_2021_2022_V2 <- cyclistic_2021_2022 %>% drop_na(c(trip_id
+,bike_type
+,start_time
+,end_time
+,start_station_name
+,start_station_id
+,end_station_name
+,end_station_id
+,start_lat
+,start_lng
+,end_lat
+,end_lng
+,user_type))
+dim(cyclistic_2021_2022_V2)
+```
+
+#### Recheck for duplicate ride_id values:
+
+```{r check for duplicates}
+sum(duplicated(cyclistic_2021_2022_V2$trip_id))
+```
+
+#### Make sure that column names are unique and consistent:
+
+```{r clean names}
+cyclistic_2021_2022_V2 <- clean_names(cyclistic_2021_2022_V2)
+```
+
+#### Recheck number of distinct start and end station names:
+
+```{r distinct counts}
+n_distinct(cyclistic_2021_2022_V2$start_station_name)
+n_distinct(cyclistic_2021_2022_V2$end_station_name)
+```
+
+#### Recheck the data frame:
+
+```{r skim df}
+skim(cyclistic_2021_2022_V2)
+```
+
+#### Note that there are now:
+
+-   5828235 rows went to 4474141
+
+-   1480 unique start stations, which do not match the unique start station ids at 1252
+
+-   1513 unique end stations, which do not match the unique end station ids at 1266
+
+-   Also, curious that the number of unique start and end stations is not the same.
+
+-   0 start stations and ids are missing
+
+-   0 end stations and ids are missing
+
+-   0 missing start latitudes or longitudes
+
+-   0 missing end latitudes and longitudes
+
+-   2 unique user types
+
+#### Check start and end station names for maintenance and temp stations:
+
+```{r list stations, results = "hide"}
+table(cyclistic_2021_2022_V2$start_station_name)
+table(cyclistic_2021_2022_V2$end_station_name)
+```
+
+#### Remove warehouse, repair, and charging stations from start_station_name. Create new draft of data frame:
+
+```{r remove rows}
+cyclistic_2021_2022_V3 <- cyclistic_2021_2022_V2[!(cyclistic_2021_2022_V2$start_station_name=="Base - 2132 W Hubbard" | 
+cyclistic_2021_2022_V2$start_station_name=="Base - 2132 W Hubbard Warehouse" |  
+cyclistic_2021_2022_V2$start_station_name=="Base - 2132 W Hubbard Warehouse" |  
+cyclistic_2021_2022_V2$start_station_name=="Hastings WH 2" | 
+cyclistic_2021_2022_V2$start_station_name=="DIVVY CASSETTE REPAIR MOBILE STATION" | 
+cyclistic_2021_2022_V2$start_station_name=="Throop/Hastings Mobile Station" | 
+cyclistic_2021_2022_V2$start_station_name=="Bissell St & Armitage Ave - Charging" | 
+cyclistic_2021_2022_V2$start_station_name=="Lincoln Ave & Roscoe St - Charging" | 
+cyclistic_2021_2022_V2$start_station_name=="Pawel Bialowas - Test- PBSC charging station" | 
+cyclistic_2021_2022_V2$start_station_name=="Wilton Ave & Diversey Pkwy - Charging"),]
+```
+
+#### Remove warehouse, repair, and charging stations from end_station_name:
+
+```{r remove more rows}
+cyclistic_2021_2022_V3 <-  cyclistic_2021_2022_V3[!(cyclistic_2021_2022_V3$end_station_name=="Base - 2132 W Hubbard" |
+cyclistic_2021_2022_V3$end_station_name=="Base - 2132 W Hubbard Warehouse" |  
+cyclistic_2021_2022_V3$end_station_name=="Base - 2132 W Hubbard Warehouse" |  
+cyclistic_2021_2022_V3$end_station_name=="Hastings WH 2" |
+cyclistic_2021_2022_V3$end_station_name=="DIVVY CASSETTE REPAIR MOBILE STATION" |
+cyclistic_2021_2022_V3$end_station_name=="Throop/Hastings Mobile Station" |
+cyclistic_2021_2022_V3$end_station_name=="Bissell St & Armitage Ave - Charging" |
+cyclistic_2021_2022_V3$end_station_name=="Lincoln Ave & Roscoe St - Charging" |
+cyclistic_2021_2022_V3$end_station_name=="Pawel Bialowas - Test- PBSC charging station" |
+cyclistic_2021_2022_V3$end_station_name=="Wilton Ave & Diversey Pkwy - Charging"),]
+```
+
+#### Recheck the data frame:
+
+```{r skim df again}
+skim(cyclistic_2021_2022_V3)
+```
+
+#### Note that there are now:
+
+-   5828235 rows became 4474141 became 4472599
+
+-   1472 unique start stations, which do not match the unique start station ids at 1245
+
+-   1502 unique end stations, which do not match the unique end station ids at 1258
+
+-   0 start stations and ids are missing
+
+-   0 end stations and ids are missing
+
+-   0 missing start latitudes or longitudes
+
+-   0 missing end latitudes and longitudes
+
+-   2 unique user types
+
+#### Create new columns: date, month, day, year, and day_of_the_week for aggregation:
+
+```{r create new columns}
+cyclistic_2021_2022_V3$date <- as.Date(cyclistic_2021_2022_V3$start_time)
+cyclistic_2021_2022_V3$month <- format(as.Date(cyclistic_2021_2022_V3$date), "%m")
+cyclistic_2021_2022_V3$day <- format(as.Date(cyclistic_2021_2022_V3$date), "%d")
+cyclistic_2021_2022_V3$year <- format(as.Date(cyclistic_2021_2022_V3$date), "%Y")
+cyclistic_2021_2022_V3$day_of_week <- format(as.Date(cyclistic_2021_2022_V3$date), "%A")
+colnames(cyclistic_2021_2022_V3)
+```
+
+#### Check that new columns created properly:
+
+Note to change the manner by which a month name is referred from a number to a name.
+
+View(cyclistic_2021_2022_V3)
+
+#### Create column for trip duration, check that it was created in difftime:
+
+Note to retype to integer.
+
+```{r}
+cyclistic_2021_2022_V3$trip_duration<- difftime(cyclistic_2021_2022_V3$end_time, cyclistic_2021_2022_V3$start_time)
+glimpse(cyclistic_2021_2022_V3)
+```
+
+#### Change trip_duration data type to integer for aggregation:
+
+Note that trip_duration has trips under 60 seconds long (-7621 seconds) and trips over 86400 seconds long (over 24hrs [2442301 seconds]). Note that these outliers are likely representative of false starts, break downs, or theft and should be removed.
+
+```{r recast data type}
+cyclistic_2021_2022_V3$trip_duration<- as.numeric(as.character(cyclistic_2021_2022_V3$trip_duration))
+summary(cyclistic_2021_2022_V3)
+```
+
+#### Count number of trip_duration rows that are equal to or over 60 seconds and equal to or over 86400 seconds:
+
+Note that 74443+269 = 74712.
+
+```{r scan length}
+length(which(cyclistic_2021_2022_V3$trip_duration <= 60))
+length(which(cyclistic_2021_2022_V3$trip_duration >= 86400))
+```
+
+#### Remove trips with false starts (60) or over 24hrs (86400) and create final version of the data frame:
+
+Note that 4472599-74712 = 4397887.
+
+```{r filter length}
+cyclistic_2021_2022_CLEAN <- cyclistic_2021_2022_V3 %>%
+  filter(trip_duration > 60 & trip_duration < 86400)
+dim(cyclistic_2021_2022_CLEAN)
+```
+
+#### Recheck for outliers:
+
+Note that there were none.
+
+```{r rescan length}
+length(which(cyclistic_2021_2022_CLEAN$trip_duration <= 60))
+length(which(cyclistic_2021_2022_CLEAN$trip_duration >= 86400))
+```
+
+#### Create csv file "cyclistic_2021_2022_CLEAN":
+
+write.csv(cyclistic_2021_2022_CLEAN, "cyclistic_2021_2022_CLEAN.csv")
+
+#### Streamline working data frame name:
+
+```{r streamline df name}
+cyclistic_analysis<- cyclistic_2021_2022_CLEAN
+```
+
+## Aggregate, Analyze, and Visualize
+
+#### Set up environment for more clear aggregation:
+
+```{r set-up aggregation environment, message = FALSE}
+library(scales)
+library(data.table)
+library(formattable)
+```
+
+```{r}
+improvement_formatter <- formatter("span", style = x ~ style(font.weight = "bold", color = ifelse(x > .50, "tomato", ifelse(x < .50, "steelblue", "black")))
+                                   , x ~ icontext(ifelse (x > .50, "arrow-up", "arrow-down"), x))
+```
+
+### Count rides and their percentage
+
+#### Count rides and their percentage of total by user type:
+
+```{r calculate percent total rides}
+user_percent <- cyclistic_analysis %>%
+  group_by(user_type) %>%
+  summarize(total_rides = n()) %>%
+  mutate(percent=percent(total_rides/sum(total_rides),0))
+```
+
+```{r}
+formattable(user_percent,
+             align =c("l", "c","r"), 
+             list('user_type' = color_tile("seashell2", "seashell3"), 'percent' = improvement_formatter))
+```
+
+#### Plot percentage of total rides by user type:
+
+```{r plot percent total rides}
+ggplot(user_percent, aes(x = "", y = percent, fill = user_type)) +
+  geom_col(color = "black") +
+  geom_label(aes(label = percent), color = c("white", 1), position = position_stack(vjust = 0.5),show.legend = FALSE) +
+  guides(fill = guide_legend(title = "Percentage of Total Rides by User Type")) +
+  scale_fill_viridis_d() +
+  coord_polar(theta = "y") +
+  theme_void()
+```
+
+#### Count rides by user type by month (total = 4397887):
+
+Note that month references should be changed to names.
+
+```{r list month counts}
+table(cyclistic_2021_2022_CLEAN$month)
+```
+
+#### Change month reference from integer to name:
+
+Note that names are out of order now that data type is changed to string.
+
+```{r mutate months}
+cyclistic_analysis <- cyclistic_2021_2022_CLEAN %>% mutate(month = month.abb[as.numeric(month)])
+table(cyclistic_analysis$month)
+```
+
+#### Put months in order:
+
+```{r order months}
+cyclistic_analysis$month <- ordered(cyclistic_analysis$month, levels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug", "Sep", "Oct","Nov", "Dec"))
+table(cyclistic_analysis$month)
+```
+
+### Count rides and their percentage by user type by month:
+
+```{r}
+rm(month_totals)
+```
+
+```{r calculate ride count by month}
+ rides_by_month<- cyclistic_analysis %>%
+  group_by(month, user_type) %>%
+  summarize(total_rides = n()) %>%
+  mutate(percent = (percent(total_rides/sum(total_rides),0)))
+formattable(rides_by_month,
+             align =c("l","c","c"), 
+           list('month' = color_tile("pink", "lightblue"), 'percent' = improvement_formatter))
+```
+
+#### Plot ride count by user type by month:
+
+```{r plot count of user rides}
+cyclistic_analysis%>%
+group_by(user_type, month)%>%
+summarize(number_of_rides = n())%>%
+arrange(user_type, month)%>%
+ggplot(aes(x = month, y = number_of_rides, fill = user_type)) + geom_col(position = "dodge", color="black") +
+  scale_fill_hue(l=40) +
+  guides(fill = guide_legend(title = "User Type"))+
+  ggtitle("Ride Count by User by Month")
+```
+
+#### Percentage rides by user type by month:
+
+```{r plot percentage of user rides}
+cyclistic_analysis%>%
+group_by(month, user_type)%>%
+summarize(total_rides = n())%>%
+mutate(percent = percent(total_rides / sum(total_rides)))%>%
+arrange(user_type, month)%>%
+ggplot(aes(x = month, y = percent, fill = user_type)) + geom_col(position = "dodge", color="black") + scale_fill_hue(l=40)+
+  guides(fill = guide_legend (title = "User Type"))+
+  ggtitle("Percentage Rides by User by Month")
+```
+
+#### Check total ride count for each user type by day of the week (total = 4397887):
+
+```{r ride count by day}
+table(cyclistic_2021_2022_CLEAN$day_of_week)
+```
+
+#### Put days of week in order:
+
+```{r order days of week}
+cyclistic_analysis$day_of_week <- ordered(cyclistic_analysis$day_of_week, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+table(cyclistic_analysis$day_of_week)
+```
+
+#### Count rides and their percentage by user type by day of the week:
+
+```{r calculate user ride counts and percentage}
+rides_by_day_of_week<- cyclistic_analysis %>%
+  group_by(day_of_week, user_type) %>%
+  summarize(total_rides = n()) %>%
+  mutate(percent = (percent(total_rides/sum(total_rides),0)))
+formattable(rides_by_day_of_week,
+             align =c("l","c","c"), 
+           list('day_of_week' = color_tile("pink", "lightblue"), 'percent' = improvement_formatter))
+```
+
+#### Plot ride count by user type by day of the week:
+
+```{r plot user rides by count, day}
+cyclistic_analysis%>%
+group_by(user_type, day_of_week)%>%
+summarize(number_of_rides = n())%>%
+arrange(user_type, day_of_week)%>%
+ggplot(aes(x = day_of_week, y = number_of_rides, fill = user_type)) + geom_col(position = "dodge", color="black") +
+  scale_fill_hue(l=40) +
+  guides(fill = guide_legend (title = "User Type"))+
+  ggtitle("Ride Count by User by Day")
+```
+
+#### Plot percentage of rides by user type by day of the week:
+
+```{r plot user rides by percentage, day}
+cyclistic_analysis%>%
+group_by(day_of_week, user_type)%>%
+summarize(total_rides = n())%>%
+mutate(percent=formattable::percent(total_rides/sum(total_rides)))%>%
+arrange(user_type, day_of_week)%>%
+ggplot(aes(x = day_of_week, y = percent, fill = user_type)) + geom_col(position = "dodge", color="black") +
+  scale_fill_hue(l=40) +
+  guides(fill = guide_legend (title = "User Type"))+
+  ggtitle("Percentage of Rides by User by Day")
+```
+
+### Aggregate trip duration by user type and bike type
+
+#### Aggregate column trip duration:
+
+```{r aggregate trip durations}
+round(summary(cyclistic_analysis$trip_duration)/60)
+```
+
+#### Aggregate trip duration by user type:
+
+Note that the average duration of a casual user's ride is roughly twice as long as a member's ride.
+
+```{r aggregate trip duration by user}
+summary_trip_duration <- cyclistic_analysis %>%
+  group_by(user_type) %>%
+  summarize(average_duration=round((mean(trip_duration))/60),
+            median_duration=round(median(trip_duration)/60),
+            min_duration=round(min(trip_duration)/60),
+            max_duration=round(max(trip_duration)/60))
+formattable(summary_trip_duration)
+```
+
+#### Aggregate trip duration by user by month:
+
+```{r}
+improvement <- formatter("span", style = x ~ style(font.weight = "bold", color = ifelse(x > 20, "tomato", ifelse(x < 20, "steelblue", "black")))
+                                   , x ~ icontext(ifelse(x >= 20, "arrow-up", "arrow-down"), x))
+```
+
+```{r summarize avg user duration by month}
+by_month <- cyclistic_analysis%>%
+group_by(month, user_type)%>%
+summarize(average_duration=round((mean(trip_duration))/60))%>%
+arrange(month, user_type)
+formattable(by_month,
+             align =c("l","c","c"), 
+           list('month' = color_tile("pink", "lightblue"), 'average_duration' = improvement))
+```
+
+#### Plot average trip duration by user by month:
+
+```{r plot avg user duration by month}
+cyclistic_analysis%>%
+group_by(user_type, month) %>%
+summarize(average_trip_duration = mean(trip_duration)/60) %>%
+arrange(user_type, month) %>%
+ggplot(aes(x = month, y = average_trip_duration, fill = user_type)) + geom_col(position = "stack", color="black") +
+  scale_fill_hue(l=40) +
+  guides(fill = guide_legend (title = "User Type"))+
+  ggtitle("Average Trip Duration by User by Month")
+```
+
+#### Aggregate trip duration by user by day of the week:
+
+```{r summarize avg user duration by day}
+by_day_of_week <- cyclistic_analysis%>%
+group_by(day_of_week, user_type)%>%
+summarize(average_duration=round((mean(trip_duration))/60))%>%
+arrange(day_of_week, user_type)
+tibble(by_day_of_week)
+formattable(by_day_of_week,
+             align =c("l","c","c"), 
+           list('day_of_week' = color_tile("pink", "lightblue"), 'average_duration' = improvement))
+```
+
+#### Plot average trip duration by user by day of the week:
+
+```{r plot avg user duration by day}
+cyclistic_analysis%>%
+group_by(user_type, day_of_week) %>%
+summarize(average_duration = mean(trip_duration)/60) %>%
+arrange(user_type, day_of_week) %>%
+ggplot(aes(x = day_of_week, y = average_duration, fill = user_type)) + geom_col(position = "stack", color="black") +
+  scale_fill_hue(l=40) +
+  guides(fill = guide_legend (title = "User Type"))+
+  ggtitle("Average Trip Duration by User by Day")
+```
+
+### Total bike type usage by user type
+
+#### Count rides and their percent of total by bike type:
+
+```{r calculate percentages of bike type}
+by_bike_type <- cyclistic_analysis %>%
+  group_by(bike_type) %>%
+  summarize(total_number = n()) %>%
+  mutate(percent=percent(total_number/sum(total_number),0))
+formattable(by_bike_type,
+             align =c("l","c","r"), 
+           list('bike_type' = color_tile("pink", "red"), 'percent' = improvement_formatter))
+```
+
+#### Plot percentage of use by bike type:
+
+```{r plot percentages of bike type}
+ggplot(by_bike_type, aes(x = "", y = percent, fill = bike_type)) +
+  geom_col(color = "black") +
+  geom_label(aes(label = percent), color = c("white", 1, 1), position = position_stack(vjust = 0.5),show.legend = FALSE) +
+  guides(fill = guide_legend(title = "Percentage of Use of Bike Types")) +
+  scale_fill_viridis_d() +
+  coord_polar(theta = "y") +
+  theme_void()
+```
+
+#### Count rides and their percentage by bike and user type and aggregate average duration of those rides:
+
+```{r calculate percentages, num of rides, and duration by bike type}
+bike_preference <- cyclistic_analysis %>%
+  group_by(bike_type, user_type) %>%
+  summarize(number_of_rides = n(), average_duration=round((mean(trip_duration))/60))%>%
+  mutate(percent=percent(number_of_rides/sum(number_of_rides),0))%>%
+  arrange(user_type, bike_type)
+formattable(bike_preference,
+             align =c("l","c","c"), 
+           list('bike_type' = color_tile("pink", "lightblue"), 'percent' = improvement_formatter))
+```
+
+#### Plot ride count by bike and user type:
+
+```{r plot number of rides on bike types to user types}
+bike_preference%>%
+ggplot(aes(x = bike_type, y = number_of_rides, fill = user_type)) + geom_col(position = "dodge", color="black") +
+  scale_fill_hue(l=40) +
+  guides(fill = guide_legend (title = "User Type"))+
+  ggtitle("Ride Count by Bike and User Type")
+```
+
+#### Plot percentage of rides by bike and user type:
+
+```{r plot percentage of use of bike types by user types}
+bike_preference%>%
+ggplot(aes(x = bike_type, y = percent, fill = user_type)) + geom_col(position = "dodge", color="black") +
+  scale_fill_hue(l=40) +
+  guides(fill = guide_legend (title = "User Type"))+
+  ggtitle("Percentage of Rides by Bike and User Type")
+```
+
+#### Plot average duration of ride by bike and user type:
+
+```{r plot average duration of bike types by user types}
+bike_preference%>%
+ggplot(aes(x = bike_type, y = average_duration, fill = user_type)) + 
+             geom_col(position = "dodge", color="black") +
+  scale_fill_hue(l=40) +
+  guides(fill = guide_legend (title = "User Type"))+
+  ggtitle("Average Duration of Rides by Bike and User Type")
+```
+
+#### Create two pie charts comparatively demonstrating percentage of use of bike type by user type.
+
+Note that electric bikes were chosen roughly 30% of the time for both user types.
+
+##### Count rides and their percentage by bike type by casual user:
+
+```{r calculate percentage of causal user}
+by_casual <- cyclistic_analysis %>%
+  filter(user_type == "casual") %>%
+  group_by(user_type, bike_type) %>%
+  summarize(total_number = n(), percent = n()) %>%
+  mutate(percent = percent(percent / sum(percent),0))
+formattable(by_casual,
+             align =c("l","c","c", "r"), 
+           list('bike_type' = color_tile("pink", "lightblue"), 'percent' = improvement_formatter))
+```
+
+##### Plot percentage of bike type used by casual user:
+
+```{r plot percentage of causal user}
+ggplot(by_casual, aes(x = "", y = percent, fill = bike_type)) +
+  geom_col(color = "black") +
+  geom_label(aes(label = percent), color = c("white", 1, 1), position = position_stack(vjust = 0.5),show.legend = FALSE) +
+  guides(fill = guide_legend(title = "Percentage of Bike Type Use by Casual Users")) +
+  scale_fill_viridis_d() +
+  coord_polar(theta = "y") +
+  theme_void()
+```
+
+##### Count rides and their percentage by bike type by member user:
+
+```{r calculate percentage of member user}
+by_member <- cyclistic_analysis %>%
+  filter(user_type == "member") %>%
+  group_by(user_type, bike_type) %>%
+  summarize(total_number = n(), percent = n()) %>%
+  mutate(percent = percent(percent / sum(percent),0))
+formattable(by_casual,
+             align =c("l","c","c", "r"), 
+           list('bike_type' = color_tile("pink", "lightblue"), 'percent' = improvement_formatter))
+```
+
+##### Plot percentage of bike type used by member user:
+
+```{r plot percentage of member user}
+ggplot(by_member, aes(x = "", y = percent, fill = bike_type)) +
+  geom_col(color = "black") +
+  geom_label(aes(label = percent), color = c("white", 1), position = position_stack(vjust = 0.5),show.legend = FALSE) +
+  guides(fill = guide_legend(title = "Percentage of Bike Type Use by Member Users")) +
+  scale_fill_viridis_d() +
+  coord_polar(theta = "y") +
+  theme_void()
+```
+
+### Investigate station use by user type
+
+#### Create new boolean column to calculate round trips based on station ids:
+
+```{r create column roundtrip}
+cyclistic_analysis_V2 <- cyclistic_analysis %>%
+  mutate(round_trip = start_station_id == end_station_id)
+```
+
+#### Compare number and percentage of round trips and their average duration by user:
+
+```{r calculate number of roundtrips}
+round_trip <- cyclistic_analysis_V2 %>%
+  group_by(user_type, round_trip) %>%
+ summarize(number_of_rides = n(), average_duration = round(mean(trip_duration)/60))%>%
+  mutate(percent_round_trips = percent(number_of_rides / sum(number_of_rides),0))%>%
+  arrange(user_type, round_trip)
+formattable(round_trip,
+             align =c("l","c","c", "c", "r"), 
+           list('bike_type' = color_tile("pink", "lightblue"), 'percent_round_trips' = formatter("span", style = x ~ style(font.weight = "bold", color = ifelse(x > .90, "tomato", ifelse(x < .90, "steelblue", "black"))))))
+```
+
+#### Plot percentage of round trips by user:
+
+```{r plot percentage rt}
+round_trip %>%
+  ggplot(aes(x = round_trip, y = percent_round_trips, fill = user_type)) +
+             geom_col(position = "dodge", color="black") +
+  scale_fill_hue(l=40) +
+guides(fill = guide_legend (title = "User Type"))+
+  ggtitle("Percentage of Round Trips by Users")
+```
+
+#### Compare number and percentage of round trips and their average duration by user and bike type:
+
+```{r aggregate round trips}
+round_trip <- cyclistic_analysis_V2 %>%
+  group_by(user_type, round_trip, bike_type) %>%
+ summarize(number_of_rides = n(), average_duration = round(mean(trip_duration)/60))%>%
+  mutate(percent_round_trips = percent(number_of_rides / sum(number_of_rides),0))%>%
+  arrange(user_type, round_trip, bike_type)
+formattable(round_trip, align =c("l","c","c","c","c","r"), 
+           list('percent_round_trips' = formatter("span", style = x ~ style(font.weight = "bold")))) 
+```
+
+#### Plot percentage of round trips by user and bike type:
+
+```{r rts by user and bike}
+round_trip_TRUE <- round_trip %>%
+  filter(round_trip == TRUE)
+round_trip_TRUE %>%
+  ggplot(aes(x = bike_type, y = percent_round_trips, fill = user_type)) +
+             geom_col(position = "dodge", color="black") +
+  scale_fill_hue(l=40) +
+guides(fill = guide_legend (title = "User Type"))+
+  ggtitle("Percentage of Round Trips by Bike and User Types")
+```
+
+### Investigate most and least used stations of user types.
+
+#### Calculate most and least used stations of both user types:
+
+```{r calculate most used station}
+most_popular_stations <- cyclistic_analysis_V2 %>%
+  group_by(start_station_id, start_station_name) %>%
+  summarize(number_of_rides = n(),average_duration = round(mean(trip_duration)/60))%>%
+  arrange(desc(number_of_rides))%>%
+  head(n = 5)
+formattable(most_popular_stations)
+```
+
+#### Calculate most used station of causal rider:
+
+```{r calculate most used station by casual}
+most_popular_casual <- cyclistic_analysis_V2 %>%
+  filter(user_type == "casual") %>%
+  group_by(start_station_id, start_station_name) %>%
+  summarize(number_of_rides=n(), average_duration=round(mean(trip_duration)/60))%>%
+  arrange(desc(number_of_rides))%>%
+  head(n = 5)
+formattable(most_popular_casual)
+```
+
+#### Calculate most taken casual trips from the most used start station:
+
+Note that Streeter Dr & Grand Ave is Navy Pier on the Lakefront Trail.
+
+```{r calculate most used trip from most used station by casual}
+LFT <- cyclistic_analysis_V2 %>%
+  filter(user_type == "casual", start_station_name == "Streeter Dr & Grand Ave") %>%
+  group_by(start_station_name, end_station_name)%>%
+    summarize(number_of_rides = n(),average_duration=round(mean(trip_duration)/60))%>%
+arrange(desc(number_of_rides))%>%
+  head(n = 5)
+formattable(LFT)
+```
+
+#### Calculate most used station of member rider:
+
+```{r calculate most used station by member}
+most_popular_member <- cyclistic_analysis_V2 %>%
+  filter(user_type == "member") %>%
+  group_by(start_station_id, start_station_name) %>%
+  summarize(number_of_rides = n(),average_duration=round(mean(trip_duration)/60))%>%
+  arrange(desc(number_of_rides))%>%
+  head(n = 5)
+formattable(most_popular_member)
+```
+
+#### Calculate most taken member commuter trip from most used start station:
+
+Note that Clinton St & Madison St is Union Station.
+
+```{r calculate most used trip from most used station by member}
+Union_Station <- cyclistic_analysis_V2 %>%
+  filter(user_type == "member", start_station_name == "Clinton St & Madison St") %>%
+  group_by(start_station_name, end_station_name)%>%
+    summarize(number_of_rides = n(),average_duration=round(mean(trip_duration)/60))%>%
+arrange(desc(number_of_rides))%>%
+  head(n = 5)
+formattable(Union_Station)
+```
+
+#### Calculate least used stations of user types:
+
+```{r calculate least used station}
+least_popular <- cyclistic_analysis_V2 %>%
+  group_by(start_station_name) %>%
+  summarize(number_of_rides = n())%>%
+  arrange(number_of_rides)%>%
+  head(n = 5)
+formattable(least_popular)
+```
+
+#### Calculate least used stations of casual users:
+
+```{r calculate least used station by casual}
+least_popular_casual <- cyclistic_analysis_V2 %>%
+  filter(user_type == "casual") %>%
+  group_by(start_station_name) %>%
+  summarize(number_of_rides = n())%>%
+  arrange(number_of_rides)%>%
+  head(n = 5)
+formattable(least_popular_casual)
+```
+
+#### Calculate least used station of member rider:
+
+```{r calculate least used station by member}
+least_popular_member <- cyclistic_analysis_V2 %>%
+  filter(user_type == "casual") %>%
+  group_by(start_station_name) %>%
+  summarize(number_of_rides = n())%>%
+  arrange(number_of_rides)%>%
+  head(n = 5)
+formattable(least_popular_member)
+```
