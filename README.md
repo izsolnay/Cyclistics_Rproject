@@ -170,7 +170,7 @@ The total percentage for the use of each, breaks down:
 
 When broken down by user type, we see similar usage rates:
 
-![](Percentage%20Bike%20Type.png){width="264"}
+<img src="Percentage%20Bike%20Type.png" width="600" height="7500">
 
 Although casual riders were the only rider type to rent docked bikes, both Casual and Member users chose electric bikes 30% of the time. When we break this down by total use, we see that member rides accounted for 40% of all classic bike rentals.
 
@@ -198,7 +198,7 @@ While on Cyclistic bikes far more than Members, Casual users took round trips. I
 
 For this analysis, we also identified the most popular start stations for casual and member rides. These were starkly different. Member rides predominantly demonstrate a commuter mentality, while casual rides demonstrate a far more relaxed enjoyment usage.
 
-![](Geography.png){width="535"}
+<img src="Geography.png" width="700" height="800">
 
 ##### Casual rides
 
